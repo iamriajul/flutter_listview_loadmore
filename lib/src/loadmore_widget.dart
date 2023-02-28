@@ -72,6 +72,9 @@ class _LoadMoreState extends State<LoadMore> {
     if (child is SliverList) {
       return _buildSliverList(child as SliverList);
     }
+    if (child is GridView) {
+      return _buildGridView(child as GridView) ?? Container();
+    }
     if (child is DraggableScrollbar) {
       return _buildDraggableScrollbar(child as DraggableScrollbar) ?? Container();
     }
@@ -97,6 +100,24 @@ class _LoadMoreState extends State<LoadMore> {
           scrollbarAnimationDuration: scrollbar.scrollbarAnimationDuration,
           scrollbarTimeToFade: scrollbar.scrollbarTimeToFade,
           child: listView,
+        );
+      }
+    } else if (child is GridView) {
+      final gridView = _buildGridView(child);
+      if (gridView != null && gridView is GridView) {
+        return DraggableScrollbar(
+          key: scrollbar.key,
+          alwaysVisibleScrollThumb: scrollbar.alwaysVisibleScrollThumb,
+          backgroundColor: scrollbar.backgroundColor,
+          controller: scrollbar.controller,
+          heightScrollThumb: scrollbar.heightScrollThumb,
+          padding: scrollbar.padding,
+          scrollThumbBuilder: scrollbar.scrollThumbBuilder,
+          labelTextBuilder: scrollbar.labelTextBuilder,
+          labelConstraints: scrollbar.labelConstraints,
+          scrollbarAnimationDuration: scrollbar.scrollbarAnimationDuration,
+          scrollbarTimeToFade: scrollbar.scrollbarTimeToFade,
+          child: gridView,
         );
       }
     }
@@ -226,6 +247,73 @@ class _LoadMoreState extends State<LoadMore> {
     }
 
     return list;
+  }
+
+  Widget? _buildGridView(GridView gridView) {
+    var delegate = gridView.childrenDelegate;
+    outer:
+    if (delegate is SliverChildBuilderDelegate) {
+      SliverChildBuilderDelegate delegate =
+      gridView.childrenDelegate as SliverChildBuilderDelegate;
+      if (!widget.whenEmptyLoad && delegate.estimatedChildCount == 0) {
+        break outer;
+      }
+      var viewCount = (delegate.estimatedChildCount ?? 0) + 1;
+      IndexedWidgetBuilder builder = (context, index) {
+        if (index == viewCount - 1) {
+          return _buildLoadMoreView();
+        }
+        return delegate.builder(context, index) ?? Container();
+      };
+
+      return GridView.builder(
+        itemBuilder: builder,
+        addAutomaticKeepAlives: delegate.addAutomaticKeepAlives,
+        addRepaintBoundaries: delegate.addRepaintBoundaries,
+        addSemanticIndexes: delegate.addSemanticIndexes,
+        dragStartBehavior: gridView.dragStartBehavior,
+        semanticChildCount: gridView.semanticChildCount,
+        itemCount: viewCount,
+        cacheExtent: gridView.cacheExtent,
+        controller: gridView.controller,
+        key: gridView.key,
+        padding: gridView.padding,
+        physics: gridView.physics,
+        primary: gridView.primary,
+        reverse: gridView.reverse,
+        scrollDirection: gridView.scrollDirection,
+        shrinkWrap: gridView.shrinkWrap,
+        gridDelegate: gridView.gridDelegate,
+      );
+    } else if (delegate is SliverChildListDelegate) {
+      SliverChildListDelegate delegate =
+      gridView.childrenDelegate as SliverChildListDelegate;
+
+      if (!widget.whenEmptyLoad && delegate.estimatedChildCount == 0) {
+        break outer;
+      }
+
+      delegate.children.add(_buildLoadMoreView());
+      return GridView(
+        children: delegate.children,
+        addAutomaticKeepAlives: delegate.addAutomaticKeepAlives,
+        addRepaintBoundaries: delegate.addRepaintBoundaries,
+        cacheExtent: gridView.cacheExtent,
+        controller: gridView.controller,
+        key: gridView.key,
+        padding: gridView.padding,
+        physics: gridView.physics,
+        primary: gridView.primary,
+        reverse: gridView.reverse,
+        scrollDirection: gridView.scrollDirection,
+        shrinkWrap: gridView.shrinkWrap,
+        addSemanticIndexes: delegate.addSemanticIndexes,
+        dragStartBehavior: gridView.dragStartBehavior,
+        semanticChildCount: gridView.semanticChildCount,
+        gridDelegate: gridView.gridDelegate,
+      );
+    }
+    return gridView;
   }
 
   LoadMoreStatus status = LoadMoreStatus.idle;
